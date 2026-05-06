@@ -1,52 +1,88 @@
-# Calculadora Vanilla Web
+# Calculadora Vanilla Web - Modo Científico
 
-Calculadora web simple construida únicamente con **HTML**, **CSS** y **JavaScript vanilla**. Sin frameworks, sin Node, sin build tools.
+Calculadora web construida en **HTML + CSS + JavaScript vanilla** (sin frameworks). Incluye modo básico y modo científico con parser propio (sin `eval()`).
 
-## Características
+## 🚀 Uso
 
-- ✅ Operaciones básicas: suma (+), resta (−), multiplicación (×), división (÷)
-- ✅ Porcentaje (%)
-- ✅ Botón C (clear) para reiniciar
-- ✅ Botón ⌫ (backspace) para borrar último dígito
-- ✅ Soporte completo de teclado
-- ✅ Evaluación segura **sin usar `eval()`**
-- ✅ Diseño moderno tema oscuro y responsive
-- ✅ Manejo de errores (división por cero)
-
-## Uso
-
-Simplemente abre `index.html` en tu navegador. No requiere instalación ni servidor.
+Abre `index.html` en tu navegador. No requiere instalación ni dependencias.
 
 bash
-# Opción 1: doble clic en index.html
-
-# Opción 2: con un servidor local
+# Opcional: servir con cualquier servidor estático
 python3 -m http.server 8000
-# Luego visita http://localhost:8000
+# Luego abre http://localhost:8000
 
 
-## Atajos de teclado
+## ✨ Características
+
+- Tema oscuro responsive
+- Operaciones básicas: `+`, `-`, `×`, `÷`, `%`
+- Soporte completo de teclado
+- Historial de la última operación
+- Modo científico colapsable
+- Parser de expresiones propio (precedencia + paréntesis), **sin `eval()`**
+- Manejo robusto de errores
+
+## 🔬 Modo científico
+
+Activa el panel pulsando el botón **Científico** en la cabecera. Funciones disponibles:
+
+| Botón | Función | Descripción |
+|-------|---------|-------------|
+| `sin` | `Math.sin(x)` | Seno (radianes) |
+| `cos` | `Math.cos(x)` | Coseno (radianes) |
+| `tan` | `Math.tan(x)` | Tangente (radianes) |
+| `log` | `Math.log10(x)` | Logaritmo base 10 |
+| `ln`  | `Math.log(x)` | Logaritmo natural |
+| `√`   | `Math.sqrt(x)` | Raíz cuadrada |
+| `x²`  | `(x)^2` | Eleva al cuadrado la expresión actual |
+| `x^y` | `Math.pow` | Potencia (operador `^`) |
+| `π`   | `Math.PI` | Constante pi |
+| `e`   | `Math.E` | Constante de Euler |
+| `n!`  | factorial | Factorial entero, 0 ≤ n ≤ 170 |
+| `(` `)` | paréntesis | Agrupación |
+
+### Reglas
+
+- Las funciones trigonométricas trabajan en **radianes**.
+- `sqrt(x)` requiere `x ≥ 0`.
+- `n!` requiere entero no negativo y `n ≤ 170` (límite de precisión IEEE 754).
+- División entre 0 lanza error.
+- Paréntesis desbalanceados lanzan error.
+
+## ⌨️ Atajos de teclado
 
 | Tecla | Acción |
 |-------|--------|
-| `0`–`9` | Insertar dígito |
-| `.` o `,` | Punto decimal |
-| `+` `-` `*` `/` | Operadores |
-| `Enter` o `=` | Calcular resultado |
-| `Escape` | Limpiar todo (C) |
-| `Backspace` | Borrar último dígito |
-| `%` | Porcentaje |
+| `0-9` `.` | Insertar dígito |
+| `+ - * / % ^ ( )` | Operadores |
+| `Enter` o `=` | Calcular |
+| `Backspace` | Borrar último carácter |
+| `Escape` | Limpiar todo |
 
-## Estructura
+## 📁 Estructura
 
 
 .
 ├── index.html    # Estructura
-├── styles.css    # Estilos (tema oscuro, responsive)
-├── script.js     # Lógica (sin eval)
+├── styles.css    # Tema oscuro responsive
+├── script.js     # Parser + lógica
 └── README.md
 
 
-## Seguridad
+## 🧠 Implementación del parser
 
-La calculadora **no usa `eval()`** ni `Function()`. Todas las operaciones se computan con una función `compute(a, b, op)` que aplica un `switch` sobre operadores válidos, evitando inyección de código.
+El evaluador implementa **descenso recursivo** con la siguiente gramática:
+
+
+expression := term (('+'|'-') term)*
+term       := factor (('*'|'/'|'%') factor)*
+factor     := unary ('^' factor)?      // ^ asociativo a la derecha
+unary      := ('+'|'-') unary | primary
+primary    := number | '(' expression ')' | func '(' expression ')'
+
+
+Esto evita por completo el uso de `eval()` y proporciona mensajes de error específicos.
+
+## 📜 Licencia
+
+MIT

@@ -1,191 +1,305 @@
 (function () {
-  'use strict';
+    'use strict';
 
-  const currentEl = document.getElementById('current');
-  const historyEl = document.getElementById('history');
-  const buttons = document.querySelectorAll('.btn');
+    const display = document.getElementById('display');
+    const history = document.getElementById('history');
+    const toggleBtn = document.getElementById('toggleScientific');
+    const sciPanel = document.getElementById('scientificPanel');
 
-  const state = {
-    current: '0',
-    previous: null,
-    operator: null,
-    justEvaluated: false,
-  };
+    let current = '';
+    let justEvaluated = false;
 
-  function updateDisplay() {
-    currentEl.textContent = formatNumber(state.current);
-    if (state.previous !== null && state.operator) {
-      historyEl.textContent = `${formatNumber(state.previous)} ${opSymbol(state.operator)}`;
-    } else {
-      historyEl.textContent = '';
+    function updateDisplay() {
+        display.value = current === '' ? '0' : current;
     }
-    document.querySelectorAll('.btn-operator').forEach((b) => b.classList.remove('active'));
-    if (state.operator && state.previous !== null && state.justEvaluated === false && state.current === '0') {
-      const activeBtn = document.querySelector(`.btn-operator[data-operator="${state.operator}"]`);
-      if (activeBtn) activeBtn.classList.add('active');
-    }
-  }
 
-  function formatNumber(value) {
-    if (value === 'Error') return value;
-    const str = String(value);
-    if (str.includes('e')) return str;
-    const [intPart, decPart] = str.split('.');
-    const formatted = Number(intPart).toLocaleString('en-US');
-    return decPart !== undefined ? `${formatted}.${decPart}` : formatted;
-  }
-
-  function opSymbol(op) {
-    return { '+': '+', '-': '−', '*': '×', '/': '÷' }[op] || op;
-  }
-
-  function inputNumber(num) {
-    if (state.current === 'Error' || state.justEvaluated) {
-      state.current = num;
-      state.justEvaluated = false;
-      if (state.justEvaluated) {
-        state.previous = null;
-        state.operator = null;
-      }
-    } else if (state.current === '0') {
-      state.current = num;
-    } else {
-      if (state.current.replace('-', '').replace('.', '').length >= 15) return;
-      state.current += num;
-    }
-    updateDisplay();
-  }
-
-  function inputDecimal() {
-    if (state.current === 'Error') return;
-    if (state.justEvaluated) {
-      state.current = '0.';
-      state.justEvaluated = false;
-      state.previous = null;
-      state.operator = null;
-    } else if (!state.current.includes('.')) {
-      state.current += '.';
-    }
-    updateDisplay();
-  }
-
-  function clearAll() {
-    state.current = '0';
-    state.previous = null;
-    state.operator = null;
-    state.justEvaluated = false;
-    updateDisplay();
-  }
-
-  function backspace() {
-    if (state.current === 'Error' || state.justEvaluated) {
-      clearAll();
-      return;
-    }
-    if (state.current.length <= 1 || (state.current.length === 2 && state.current.startsWith('-'))) {
-      state.current = '0';
-    } else {
-      state.current = state.current.slice(0, -1);
-    }
-    updateDisplay();
-  }
-
-  function percent() {
-    if (state.current === 'Error') return;
-    const value = parseFloat(state.current) / 100;
-    state.current = String(value);
-    updateDisplay();
-  }
-
-  function compute(a, b, op) {
-    switch (op) {
-      case '+': return a + b;
-      case '-': return a - b;
-      case '*': return a * b;
-      case '/':
-        if (b === 0) return 'Error';
-        return a / b;
-      default: return b;
-    }
-  }
-
-  function roundResult(num) {
-    if (typeof num !== 'number' || !isFinite(num)) return 'Error';
-    return Math.round(num * 1e10) / 1e10;
-  }
-
-  function setOperator(op) {
-    if (state.current === 'Error') return;
-    const currentNum = parseFloat(state.current);
-
-    if (state.previous !== null && state.operator && !state.justEvaluated && state.current !== '0') {
-      const result = compute(state.previous, currentNum, state.operator);
-      if (result === 'Error') {
-        state.current = 'Error';
-        state.previous = null;
-        state.operator = null;
+    function clearAll() {
+        current = '';
+        history.textContent = '';
         updateDisplay();
-        return;
-      }
-      state.previous = roundResult(result);
-      state.current = '0';
-    } else if (state.previous === null) {
-      state.previous = currentNum;
-      state.current = '0';
-    } else if (state.justEvaluated) {
-      state.previous = currentNum;
-      state.current = '0';
-      state.justEvaluated = false;
     }
 
-    state.operator = op;
-    updateDisplay();
-  }
-
-  function equals() {
-    if (state.current === 'Error' || state.previous === null || !state.operator) return;
-    const currentNum = state.current === '0' && state.justEvaluated ? state.previous : parseFloat(state.current);
-    const a = state.previous;
-    const b = state.current === '0' ? a : currentNum;
-    const result = compute(a, b, state.operator);
-
-    if (result === 'Error') {
-      state.current = 'Error';
-    } else {
-      historyEl.textContent = `${formatNumber(a)} ${opSymbol(state.operator)} ${formatNumber(b)} =`;
-      state.current = String(roundResult(result));
+    function backspace() {
+        if (justEvaluated) {
+            clearAll();
+            return;
+        }
+        // Remove function names entirely if at end
+        const funcs = ['sin(', 'cos(', 'tan(', 'log(', 'ln(', 'sqrt(', 'pi'];
+        for (const f of funcs) {
+            if (current.endsWith(f)) {
+                current = current.slice(0, -f.length);
+                updateDisplay();
+                return;
+            }
+        }
+        current = current.slice(0, -1);
+        updateDisplay();
     }
-    state.previous = null;
-    state.operator = null;
-    state.justEvaluated = true;
-    currentEl.textContent = formatNumber(state.current);
-  }
 
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const num = btn.dataset.number;
-      const op = btn.dataset.operator;
-      const action = btn.dataset.action;
-      if (num !== undefined) inputNumber(num);
-      else if (op !== undefined) setOperator(op);
-      else if (action === 'decimal') inputDecimal();
-      else if (action === 'clear') clearAll();
-      else if (action === 'backspace') backspace();
-      else if (action === 'percent') percent();
-      else if (action === 'equals') equals();
+    function append(value) {
+        if (justEvaluated) {
+            // If operator, continue with result; if number/func, restart
+            if (/[+\-*/^%)]/.test(value)) {
+                // keep current
+            } else {
+                current = '';
+            }
+            justEvaluated = false;
+        }
+        current += value;
+        updateDisplay();
+    }
+
+    function applyFunc(funcText) {
+        if (justEvaluated) {
+            current = '';
+            justEvaluated = false;
+        }
+        current += funcText;
+        updateDisplay();
+    }
+
+    function squareCurrent() {
+        if (current === '') return;
+        current = '(' + current + ')^2';
+        updateDisplay();
+    }
+
+    function factorialCurrent() {
+        if (current === '') return;
+        try {
+            const val = evaluate(current);
+            const result = factorial(val);
+            history.textContent = current + '! =';
+            current = formatResult(result);
+            justEvaluated = true;
+            updateDisplay();
+        } catch (e) {
+            display.value = 'Error: ' + e.message;
+            current = '';
+            justEvaluated = true;
+        }
+    }
+
+    function factorial(n) {
+        if (!Number.isInteger(n)) throw new Error('Factorial requiere entero');
+        if (n < 0) throw new Error('Factorial negativo');
+        if (n > 170) throw new Error('Factorial muy grande');
+        if (n === 0 || n === 1) return 1;
+        let r = 1;
+        for (let i = 2; i <= n; i++) r *= i;
+        return r;
+    }
+
+    function formatResult(num) {
+        if (!isFinite(num)) throw new Error('Resultado infinito');
+        if (Number.isInteger(num)) return num.toString();
+        return parseFloat(num.toFixed(10)).toString();
+    }
+
+    // ===== PARSER =====
+    // Tokenize and evaluate expressions with precedence
+    function evaluate(expr) {
+        if (!expr || expr.trim() === '') throw new Error('Vacío');
+
+        // Replace constants
+        let s = expr.replace(/pi/g, '(' + Math.PI + ')')
+                    .replace(/(?<![a-zA-Z0-9_.])e(?![a-zA-Z0-9_(])/g, '(' + Math.E + ')');
+
+        const tokens = tokenize(s);
+        const parser = new Parser(tokens);
+        const result = parser.parseExpression();
+        if (!parser.atEnd()) throw new Error('Sintaxis');
+        return result;
+    }
+
+    function tokenize(s) {
+        const tokens = [];
+        let i = 0;
+        while (i < s.length) {
+            const c = s[i];
+            if (c === ' ') { i++; continue; }
+            if (/[0-9.]/.test(c)) {
+                let num = '';
+                while (i < s.length && /[0-9.]/.test(s[i])) { num += s[i]; i++; }
+                tokens.push({ type: 'num', value: parseFloat(num) });
+                continue;
+            }
+            if (/[a-zA-Z]/.test(c)) {
+                let name = '';
+                while (i < s.length && /[a-zA-Z]/.test(s[i])) { name += s[i]; i++; }
+                tokens.push({ type: 'func', value: name });
+                continue;
+            }
+            if ('+-*/^%()'.indexOf(c) !== -1) {
+                tokens.push({ type: 'op', value: c });
+                i++;
+                continue;
+            }
+            throw new Error('Carácter inválido: ' + c);
+        }
+        return tokens;
+    }
+
+    class Parser {
+        constructor(tokens) {
+            this.tokens = tokens;
+            this.pos = 0;
+        }
+        peek() { return this.tokens[this.pos]; }
+        consume() { return this.tokens[this.pos++]; }
+        atEnd() { return this.pos >= this.tokens.length; }
+
+        // Expression: term (('+'|'-') term)*
+        parseExpression() {
+            let left = this.parseTerm();
+            while (!this.atEnd()) {
+                const t = this.peek();
+                if (t.type === 'op' && (t.value === '+' || t.value === '-')) {
+                    this.consume();
+                    const right = this.parseTerm();
+                    left = t.value === '+' ? left + right : left - right;
+                } else break;
+            }
+            return left;
+        }
+
+        // Term: factor (('*'|'/'|'%') factor)*
+        parseTerm() {
+            let left = this.parseFactor();
+            while (!this.atEnd()) {
+                const t = this.peek();
+                if (t.type === 'op' && (t.value === '*' || t.value === '/' || t.value === '%')) {
+                    this.consume();
+                    const right = this.parseFactor();
+                    if (t.value === '*') left = left * right;
+                    else if (t.value === '/') {
+                        if (right === 0) throw new Error('División por cero');
+                        left = left / right;
+                    } else left = left % right;
+                } else break;
+            }
+            return left;
+        }
+
+        // Factor: power ('^' factor)?  (right-assoc)
+        parseFactor() {
+            const base = this.parseUnary();
+            if (!this.atEnd()) {
+                const t = this.peek();
+                if (t.type === 'op' && t.value === '^') {
+                    this.consume();
+                    const exp = this.parseFactor();
+                    return Math.pow(base, exp);
+                }
+            }
+            return base;
+        }
+
+        // Unary: ('+'|'-') unary | primary
+        parseUnary() {
+            const t = this.peek();
+            if (t && t.type === 'op' && (t.value === '+' || t.value === '-')) {
+                this.consume();
+                const v = this.parseUnary();
+                return t.value === '-' ? -v : v;
+            }
+            return this.parsePrimary();
+        }
+
+        // Primary: number | '(' expr ')' | func '(' expr ')'
+        parsePrimary() {
+            if (this.atEnd()) throw new Error('Expresión incompleta');
+            const t = this.consume();
+            if (t.type === 'num') return t.value;
+            if (t.type === 'op' && t.value === '(') {
+                const v = this.parseExpression();
+                const next = this.consume();
+                if (!next || next.value !== ')') throw new Error('Paréntesis desbalanceado');
+                return v;
+            }
+            if (t.type === 'func') {
+                const next = this.consume();
+                if (!next || next.value !== '(') throw new Error('Falta ( tras ' + t.value);
+                const arg = this.parseExpression();
+                const close = this.consume();
+                if (!close || close.value !== ')') throw new Error('Paréntesis desbalanceado');
+                return applyFunction(t.value, arg);
+            }
+            throw new Error('Token inesperado');
+        }
+    }
+
+    function applyFunction(name, x) {
+        switch (name) {
+            case 'sin': return Math.sin(x);
+            case 'cos': return Math.cos(x);
+            case 'tan': return Math.tan(x);
+            case 'log': return Math.log10(x);
+            case 'ln': return Math.log(x);
+            case 'sqrt':
+                if (x < 0) throw new Error('Raíz de negativo');
+                return Math.sqrt(x);
+            default: throw new Error('Función desconocida: ' + name);
+        }
+    }
+
+    function calculate() {
+        if (current === '') return;
+        try {
+            const result = evaluate(current);
+            const formatted = formatResult(result);
+            history.textContent = current + ' =';
+            current = formatted;
+            justEvaluated = true;
+            updateDisplay();
+        } catch (e) {
+            display.value = 'Error: ' + e.message;
+            current = '';
+            justEvaluated = true;
+        }
+    }
+
+    // ===== EVENT HANDLERS =====
+    document.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const action = btn.dataset.action;
+            const value = btn.dataset.value;
+            switch (action) {
+                case 'append': append(value); break;
+                case 'clear': clearAll(); break;
+                case 'backspace': backspace(); break;
+                case 'equals': calculate(); break;
+                case 'func': applyFunc(value); break;
+                case 'square': squareCurrent(); break;
+                case 'factorial': factorialCurrent(); break;
+            }
+        });
     });
-  });
 
-  document.addEventListener('keydown', (e) => {
-    const key = e.key;
-    if (/^[0-9]$/.test(key)) { inputNumber(key); e.preventDefault(); }
-    else if (key === '.' || key === ',') { inputDecimal(); e.preventDefault(); }
-    else if (key === '+' || key === '-' || key === '*' || key === '/') { setOperator(key); e.preventDefault(); }
-    else if (key === 'Enter' || key === '=') { equals(); e.preventDefault(); }
-    else if (key === 'Escape') { clearAll(); e.preventDefault(); }
-    else if (key === 'Backspace') { backspace(); e.preventDefault(); }
-    else if (key === '%') { percent(); e.preventDefault(); }
-  });
+    toggleBtn.addEventListener('click', () => {
+        sciPanel.classList.toggle('hidden');
+        toggleBtn.classList.toggle('active');
+    });
 
-  updateDisplay();
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (/[0-9.+\-*/%()^]/.test(k)) {
+            e.preventDefault();
+            append(k);
+        } else if (k === 'Enter' || k === '=') {
+            e.preventDefault();
+            calculate();
+        } else if (k === 'Backspace') {
+            e.preventDefault();
+            backspace();
+        } else if (k === 'Escape') {
+            e.preventDefault();
+            clearAll();
+        }
+    });
+
+    updateDisplay();
 })();
