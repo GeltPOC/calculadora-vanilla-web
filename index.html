@@ -1,66 +1,72 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Científica</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora Científica - Día/Noche</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <main class="app">
     <div class="calculator">
-        <div class="header">
-            <h1>Calculadora</h1>
-            <button id="toggleScientific" class="toggle-btn">Científico</button>
-        </div>
+      <header class="calc-header">
+        <h1 class="title">Calculadora</h1>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema" title="Cambiar tema">
+          <span id="theme-icon">🌙</span>
+        </button>
+      </header>
 
-        <div class="display">
-            <div id="history" class="history"></div>
-            <input type="text" id="display" readonly value="0">
-        </div>
+      <div class="display">
+        <div id="history" class="history"></div>
+        <div id="output" class="output">0</div>
+      </div>
 
-        <div id="scientificPanel" class="scientific-panel hidden">
-            <button class="btn sci" data-action="func" data-value="sin(">sin</button>
-            <button class="btn sci" data-action="func" data-value="cos(">cos</button>
-            <button class="btn sci" data-action="func" data-value="tan(">tan</button>
-            <button class="btn sci" data-action="func" data-value="log(">log</button>
-            <button class="btn sci" data-action="func" data-value="ln(">ln</button>
-            <button class="btn sci" data-action="func" data-value="sqrt(">√</button>
-            <button class="btn sci" data-action="square">x²</button>
-            <button class="btn sci" data-action="append" data-value="^">x^y</button>
-            <button class="btn sci" data-action="append" data-value="pi">π</button>
-            <button class="btn sci" data-action="append" data-value="e">e</button>
-            <button class="btn sci" data-action="factorial">n!</button>
-            <button class="btn sci" data-action="append" data-value="(">(</button>
-            <button class="btn sci" data-action="append" data-value=")">)</button>
-        </div>
+      <div class="keys">
+        <!-- Fila científica 1 -->
+        <button class="key sci" data-action="func" data-func="sin">sin</button>
+        <button class="key sci" data-action="func" data-func="cos">cos</button>
+        <button class="key sci" data-action="func" data-func="tan">tan</button>
+        <button class="key sci" data-action="func" data-func="log">log</button>
+        <button class="key sci" data-action="func" data-func="ln">ln</button>
 
-        <div class="buttons">
-            <button class="btn clear" data-action="clear">C</button>
-            <button class="btn op" data-action="backspace">⌫</button>
-            <button class="btn op" data-action="append" data-value="%">%</button>
-            <button class="btn op" data-action="append" data-value="/">÷</button>
+        <!-- Fila científica 2 -->
+        <button class="key sci" data-action="square">x²</button>
+        <button class="key sci" data-action="power">x^y</button>
+        <button class="key sci" data-action="sqrt">√</button>
+        <button class="key sci" data-action="const" data-const="pi">π</button>
+        <button class="key sci" data-action="const" data-const="e">e</button>
 
-            <button class="btn num" data-action="append" data-value="7">7</button>
-            <button class="btn num" data-action="append" data-value="8">8</button>
-            <button class="btn num" data-action="append" data-value="9">9</button>
-            <button class="btn op" data-action="append" data-value="*">×</button>
+        <!-- Fila científica 3 -->
+        <button class="key sci" data-action="factorial">n!</button>
+        <button class="key sci" data-action="paren" data-paren="(">(</button>
+        <button class="key sci" data-action="paren" data-paren=")">)</button>
+        <button class="key util" data-action="clear">C</button>
+        <button class="key util" data-action="backspace">⌫</button>
 
-            <button class="btn num" data-action="append" data-value="4">4</button>
-            <button class="btn num" data-action="append" data-value="5">5</button>
-            <button class="btn num" data-action="append" data-value="6">6</button>
-            <button class="btn op" data-action="append" data-value="-">−</button>
+        <!-- Fila numérica -->
+        <button class="key num" data-action="num" data-num="7">7</button>
+        <button class="key num" data-action="num" data-num="8">8</button>
+        <button class="key num" data-action="num" data-num="9">9</button>
+        <button class="key op" data-action="op" data-op="/">÷</button>
+        <button class="key op" data-action="op" data-op="*">×</button>
 
-            <button class="btn num" data-action="append" data-value="1">1</button>
-            <button class="btn num" data-action="append" data-value="2">2</button>
-            <button class="btn num" data-action="append" data-value="3">3</button>
-            <button class="btn op" data-action="append" data-value="+">+</button>
+        <button class="key num" data-action="num" data-num="4">4</button>
+        <button class="key num" data-action="num" data-num="5">5</button>
+        <button class="key num" data-action="num" data-num="6">6</button>
+        <button class="key op" data-action="op" data-op="-">−</button>
+        <button class="key op" data-action="op" data-op="+">+</button>
 
-            <button class="btn num zero" data-action="append" data-value="0">0</button>
-            <button class="btn num" data-action="append" data-value=".">.</button>
-            <button class="btn equals" data-action="equals">=</button>
-        </div>
+        <button class="key num" data-action="num" data-num="1">1</button>
+        <button class="key num" data-action="num" data-num="2">2</button>
+        <button class="key num" data-action="num" data-num="3">3</button>
+        <button class="key num" data-action="num" data-num="0">0</button>
+        <button class="key num" data-action="dot">.</button>
+
+        <button class="key equals" data-action="equals">=</button>
+      </div>
     </div>
+  </main>
 
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

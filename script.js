@@ -1,305 +1,353 @@
-(function () {
-    'use strict';
+/* ====== TEMA DÍA/NOCHE ====== */
+(function initTheme() {
+  const STORAGE_KEY = 'calc-theme';
+  const saved = localStorage.getItem(STORAGE_KEY);
+  let theme;
 
-    const display = document.getElementById('display');
-    const history = document.getElementById('history');
-    const toggleBtn = document.getElementById('toggleScientific');
-    const sciPanel = document.getElementById('scientificPanel');
+  if (saved === 'light' || saved === 'dark') {
+    theme = saved;
+  } else {
+    // Fallback a prefers-color-scheme
+    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    theme = prefersLight ? 'light' : 'dark';
+  }
 
-    let current = '';
-    let justEvaluated = false;
+  applyTheme(theme);
 
-    function updateDisplay() {
-        display.value = current === '' ? '0' : current;
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('theme-toggle');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const current = document.body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+        const next = current === 'light' ? 'dark' : 'light';
+        applyTheme(next);
+        localStorage.setItem(STORAGE_KEY, next);
+      });
     }
+  });
 
-    function clearAll() {
-        current = '';
-        history.textContent = '';
-        updateDisplay();
+  function applyTheme(t) {
+    if (t === 'light') {
+      document.body.setAttribute('data-theme', 'light');
+    } else {
+      document.body.removeAttribute('data-theme');
     }
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.textContent = t === 'light' ? '☀️' : '🌙';
+  }
+})();
 
-    function backspace() {
-        if (justEvaluated) {
-            clearAll();
-            return;
-        }
-        // Remove function names entirely if at end
-        const funcs = ['sin(', 'cos(', 'tan(', 'log(', 'ln(', 'sqrt(', 'pi'];
-        for (const f of funcs) {
-            if (current.endsWith(f)) {
-                current = current.slice(0, -f.length);
-                updateDisplay();
-                return;
-            }
-        }
-        current = current.slice(0, -1);
-        updateDisplay();
+/* ====== CALCULADORA ====== */
+(function initCalculator() {
+  let expression = '';
+  let lastResult = null;
+
+  const outputEl = () => document.getElementById('output');
+  const historyEl = () => document.getElementById('history');
+
+  function render() {
+    const out = outputEl();
+    const hist = historyEl();
+    if (out) out.textContent = expression || '0';
+    if (hist && lastResult !== null) hist.textContent = lastResult;
+  }
+
+  function clearAll() {
+    expression = '';
+    lastResult = null;
+    const hist = historyEl();
+    if (hist) hist.textContent = '';
+    render();
+  }
+
+  function backspace() {
+    // Si el último token es una función tipo "sin(", borrar todo el token
+    const funcMatch = expression.match(/(sin|cos|tan|log|ln|sqrt)\($/);
+    if (funcMatch) {
+      expression = expression.slice(0, -funcMatch[0].length);
+    } else {
+      expression = expression.slice(0, -1);
     }
+    render();
+  }
 
-    function append(value) {
-        if (justEvaluated) {
-            // If operator, continue with result; if number/func, restart
-            if (/[+\-*/^%)]/.test(value)) {
-                // keep current
-            } else {
-                current = '';
-            }
-            justEvaluated = false;
-        }
-        current += value;
-        updateDisplay();
+  function appendNum(n) {
+    expression += n;
+    render();
+  }
+
+  function appendDot() {
+    // Evitar dobles puntos en el número actual
+    const parts = expression.split(/[+\-*/^()]/);
+    const last = parts[parts.length - 1];
+    if (last.includes('.')) return;
+    if (last === '') expression += '0';
+    expression += '.';
+    render();
+  }
+
+  function appendOp(op) {
+    if (expression === '' && op === '-') {
+      expression = '-';
+      render();
+      return;
     }
-
-    function applyFunc(funcText) {
-        if (justEvaluated) {
-            current = '';
-            justEvaluated = false;
-        }
-        current += funcText;
-        updateDisplay();
+    if (expression === '') return;
+    const lastChar = expression.slice(-1);
+    if ('+-*/^'.includes(lastChar)) {
+      expression = expression.slice(0, -1) + op;
+    } else {
+      expression += op;
     }
+    render();
+  }
 
-    function squareCurrent() {
-        if (current === '') return;
-        current = '(' + current + ')^2';
-        updateDisplay();
+  function appendParen(p) {
+    expression += p;
+    render();
+  }
+
+  function appendFunc(fn) {
+    expression += fn + '(';
+    render();
+  }
+
+  function appendConst(c) {
+    if (c === 'pi') expression += String(Math.PI);
+    else if (c === 'e') expression += String(Math.E);
+    render();
+  }
+
+  function applySquare() {
+    expression += '^2';
+    render();
+  }
+
+  function applyPower() {
+    expression += '^';
+    render();
+  }
+
+  function applySqrt() {
+    expression += 'sqrt(';
+    render();
+  }
+
+  function applyFactorial() {
+    // Calcular factorial del último número
+    const match = expression.match(/(\d+(?:\.\d+)?)$/);
+    if (!match) return;
+    const num = parseFloat(match[1]);
+    if (!Number.isInteger(num) || num < 0 || num > 170) {
+      lastResult = 'Error: factorial inválido';
+      render();
+      return;
     }
+    let f = 1;
+    for (let i = 2; i <= num; i++) f *= i;
+    expression = expression.slice(0, -match[1].length) + String(f);
+    render();
+  }
 
-    function factorialCurrent() {
-        if (current === '') return;
-        try {
-            const val = evaluate(current);
-            const result = factorial(val);
-            history.textContent = current + '! =';
-            current = formatResult(result);
-            justEvaluated = true;
-            updateDisplay();
-        } catch (e) {
-            display.value = 'Error: ' + e.message;
-            current = '';
-            justEvaluated = true;
+  /* ====== PARSER (sin eval) ======
+     Algoritmo Shunting-Yard + evaluación de RPN.
+     Soporta: + - * / ^ , paréntesis, funciones sin/cos/tan/log/ln/sqrt, números. */
+
+  const FUNCTIONS = {
+    sin: Math.sin,
+    cos: Math.cos,
+    tan: Math.tan,
+    log: Math.log10,
+    ln: Math.log,
+    sqrt: Math.sqrt,
+  };
+
+  const OPERATORS = {
+    '+': { prec: 1, assoc: 'L', fn: (a, b) => a + b },
+    '-': { prec: 1, assoc: 'L', fn: (a, b) => a - b },
+    '*': { prec: 2, assoc: 'L', fn: (a, b) => a * b },
+    '/': { prec: 2, assoc: 'L', fn: (a, b) => a / b },
+    '^': { prec: 4, assoc: 'R', fn: (a, b) => Math.pow(a, b) },
+  };
+
+  function tokenize(expr) {
+    const tokens = [];
+    let i = 0;
+    while (i < expr.length) {
+      const c = expr[i];
+      if (c === ' ') { i++; continue; }
+
+      // Número
+      if (/[0-9.]/.test(c)) {
+        let num = '';
+        while (i < expr.length && /[0-9.]/.test(expr[i])) {
+          num += expr[i];
+          i++;
         }
+        tokens.push({ type: 'num', value: parseFloat(num) });
+        continue;
+      }
+
+      // Función o identificador
+      if (/[a-zA-Z]/.test(c)) {
+        let id = '';
+        while (i < expr.length && /[a-zA-Z]/.test(expr[i])) {
+          id += expr[i];
+          i++;
+        }
+        if (FUNCTIONS[id]) {
+          tokens.push({ type: 'func', value: id });
+        } else {
+          throw new Error('Identificador desconocido: ' + id);
+        }
+        continue;
+      }
+
+      // Operadores
+      if ('+-*/^'.includes(c)) {
+        // Detectar unario menos / más
+        const prev = tokens[tokens.length - 1];
+        if ((c === '-' || c === '+') &&
+            (!prev || prev.type === 'op' || prev.type === 'lparen' || prev.type === 'func')) {
+          // Unario: convertir a (0 - x) usando truco: emitir 0 y operador
+          tokens.push({ type: 'num', value: 0 });
+          tokens.push({ type: 'op', value: c });
+          i++;
+          continue;
+        }
+        tokens.push({ type: 'op', value: c });
+        i++;
+        continue;
+      }
+
+      if (c === '(') { tokens.push({ type: 'lparen' }); i++; continue; }
+      if (c === ')') { tokens.push({ type: 'rparen' }); i++; continue; }
+
+      throw new Error('Carácter inválido: ' + c);
     }
+    return tokens;
+  }
 
-    function factorial(n) {
-        if (!Number.isInteger(n)) throw new Error('Factorial requiere entero');
-        if (n < 0) throw new Error('Factorial negativo');
-        if (n > 170) throw new Error('Factorial muy grande');
-        if (n === 0 || n === 1) return 1;
-        let r = 1;
-        for (let i = 2; i <= n; i++) r *= i;
-        return r;
+  function toRPN(tokens) {
+    const output = [];
+    const stack = [];
+    for (const t of tokens) {
+      if (t.type === 'num') output.push(t);
+      else if (t.type === 'func') stack.push(t);
+      else if (t.type === 'op') {
+        while (stack.length) {
+          const top = stack[stack.length - 1];
+          if (top.type === 'func') {
+            output.push(stack.pop());
+          } else if (top.type === 'op') {
+            const o1 = OPERATORS[t.value];
+            const o2 = OPERATORS[top.value];
+            if ((o1.assoc === 'L' && o1.prec <= o2.prec) ||
+                (o1.assoc === 'R' && o1.prec < o2.prec)) {
+              output.push(stack.pop());
+            } else break;
+          } else break;
+        }
+        stack.push(t);
+      } else if (t.type === 'lparen') {
+        stack.push(t);
+      } else if (t.type === 'rparen') {
+        while (stack.length && stack[stack.length - 1].type !== 'lparen') {
+          output.push(stack.pop());
+        }
+        if (!stack.length) throw new Error('Paréntesis desbalanceados');
+        stack.pop(); // descartar lparen
+        if (stack.length && stack[stack.length - 1].type === 'func') {
+          output.push(stack.pop());
+        }
+      }
     }
-
-    function formatResult(num) {
-        if (!isFinite(num)) throw new Error('Resultado infinito');
-        if (Number.isInteger(num)) return num.toString();
-        return parseFloat(num.toFixed(10)).toString();
+    while (stack.length) {
+      const top = stack.pop();
+      if (top.type === 'lparen' || top.type === 'rparen') {
+        throw new Error('Paréntesis desbalanceados');
+      }
+      output.push(top);
     }
+    return output;
+  }
 
-    // ===== PARSER =====
-    // Tokenize and evaluate expressions with precedence
-    function evaluate(expr) {
-        if (!expr || expr.trim() === '') throw new Error('Vacío');
-
-        // Replace constants
-        let s = expr.replace(/pi/g, '(' + Math.PI + ')')
-                    .replace(/(?<![a-zA-Z0-9_.])e(?![a-zA-Z0-9_(])/g, '(' + Math.E + ')');
-
-        const tokens = tokenize(s);
-        const parser = new Parser(tokens);
-        const result = parser.parseExpression();
-        if (!parser.atEnd()) throw new Error('Sintaxis');
-        return result;
+  function evalRPN(rpn) {
+    const stack = [];
+    for (const t of rpn) {
+      if (t.type === 'num') stack.push(t.value);
+      else if (t.type === 'op') {
+        const b = stack.pop();
+        const a = stack.pop();
+        if (a === undefined || b === undefined) throw new Error('Expresión inválida');
+        stack.push(OPERATORS[t.value].fn(a, b));
+      } else if (t.type === 'func') {
+        const a = stack.pop();
+        if (a === undefined) throw new Error('Argumento faltante');
+        stack.push(FUNCTIONS[t.value](a));
+      }
     }
+    if (stack.length !== 1) throw new Error('Expresión inválida');
+    return stack[0];
+  }
 
-    function tokenize(s) {
-        const tokens = [];
-        let i = 0;
-        while (i < s.length) {
-            const c = s[i];
-            if (c === ' ') { i++; continue; }
-            if (/[0-9.]/.test(c)) {
-                let num = '';
-                while (i < s.length && /[0-9.]/.test(s[i])) { num += s[i]; i++; }
-                tokens.push({ type: 'num', value: parseFloat(num) });
-                continue;
-            }
-            if (/[a-zA-Z]/.test(c)) {
-                let name = '';
-                while (i < s.length && /[a-zA-Z]/.test(s[i])) { name += s[i]; i++; }
-                tokens.push({ type: 'func', value: name });
-                continue;
-            }
-            if ('+-*/^%()'.indexOf(c) !== -1) {
-                tokens.push({ type: 'op', value: c });
-                i++;
-                continue;
-            }
-            throw new Error('Carácter inválido: ' + c);
-        }
-        return tokens;
+  function evaluate() {
+    if (!expression) return;
+    try {
+      const tokens = tokenize(expression);
+      const rpn = toRPN(tokens);
+      const result = evalRPN(rpn);
+      if (!isFinite(result)) throw new Error('Resultado no finito');
+      lastResult = expression + ' =';
+      // Redondear flotantes con tolerancia
+      const rounded = Math.round(result * 1e12) / 1e12;
+      expression = String(rounded);
+      render();
+    } catch (err) {
+      lastResult = 'Error';
+      const hist = historyEl();
+      if (hist) hist.textContent = 'Error: ' + err.message;
+      const out = outputEl();
+      if (out) out.textContent = '0';
+      expression = '';
     }
+  }
 
-    class Parser {
-        constructor(tokens) {
-            this.tokens = tokens;
-            this.pos = 0;
+  /* ====== EVENT LISTENERS ====== */
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.key').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        switch (action) {
+          case 'num': appendNum(btn.dataset.num); break;
+          case 'dot': appendDot(); break;
+          case 'op': appendOp(btn.dataset.op); break;
+          case 'paren': appendParen(btn.dataset.paren); break;
+          case 'func': appendFunc(btn.dataset.func); break;
+          case 'const': appendConst(btn.dataset.const); break;
+          case 'square': applySquare(); break;
+          case 'power': applyPower(); break;
+          case 'sqrt': applySqrt(); break;
+          case 'factorial': applyFactorial(); break;
+          case 'clear': clearAll(); break;
+          case 'backspace': backspace(); break;
+          case 'equals': evaluate(); break;
         }
-        peek() { return this.tokens[this.pos]; }
-        consume() { return this.tokens[this.pos++]; }
-        atEnd() { return this.pos >= this.tokens.length; }
-
-        // Expression: term (('+'|'-') term)*
-        parseExpression() {
-            let left = this.parseTerm();
-            while (!this.atEnd()) {
-                const t = this.peek();
-                if (t.type === 'op' && (t.value === '+' || t.value === '-')) {
-                    this.consume();
-                    const right = this.parseTerm();
-                    left = t.value === '+' ? left + right : left - right;
-                } else break;
-            }
-            return left;
-        }
-
-        // Term: factor (('*'|'/'|'%') factor)*
-        parseTerm() {
-            let left = this.parseFactor();
-            while (!this.atEnd()) {
-                const t = this.peek();
-                if (t.type === 'op' && (t.value === '*' || t.value === '/' || t.value === '%')) {
-                    this.consume();
-                    const right = this.parseFactor();
-                    if (t.value === '*') left = left * right;
-                    else if (t.value === '/') {
-                        if (right === 0) throw new Error('División por cero');
-                        left = left / right;
-                    } else left = left % right;
-                } else break;
-            }
-            return left;
-        }
-
-        // Factor: power ('^' factor)?  (right-assoc)
-        parseFactor() {
-            const base = this.parseUnary();
-            if (!this.atEnd()) {
-                const t = this.peek();
-                if (t.type === 'op' && t.value === '^') {
-                    this.consume();
-                    const exp = this.parseFactor();
-                    return Math.pow(base, exp);
-                }
-            }
-            return base;
-        }
-
-        // Unary: ('+'|'-') unary | primary
-        parseUnary() {
-            const t = this.peek();
-            if (t && t.type === 'op' && (t.value === '+' || t.value === '-')) {
-                this.consume();
-                const v = this.parseUnary();
-                return t.value === '-' ? -v : v;
-            }
-            return this.parsePrimary();
-        }
-
-        // Primary: number | '(' expr ')' | func '(' expr ')'
-        parsePrimary() {
-            if (this.atEnd()) throw new Error('Expresión incompleta');
-            const t = this.consume();
-            if (t.type === 'num') return t.value;
-            if (t.type === 'op' && t.value === '(') {
-                const v = this.parseExpression();
-                const next = this.consume();
-                if (!next || next.value !== ')') throw new Error('Paréntesis desbalanceado');
-                return v;
-            }
-            if (t.type === 'func') {
-                const next = this.consume();
-                if (!next || next.value !== '(') throw new Error('Falta ( tras ' + t.value);
-                const arg = this.parseExpression();
-                const close = this.consume();
-                if (!close || close.value !== ')') throw new Error('Paréntesis desbalanceado');
-                return applyFunction(t.value, arg);
-            }
-            throw new Error('Token inesperado');
-        }
-    }
-
-    function applyFunction(name, x) {
-        switch (name) {
-            case 'sin': return Math.sin(x);
-            case 'cos': return Math.cos(x);
-            case 'tan': return Math.tan(x);
-            case 'log': return Math.log10(x);
-            case 'ln': return Math.log(x);
-            case 'sqrt':
-                if (x < 0) throw new Error('Raíz de negativo');
-                return Math.sqrt(x);
-            default: throw new Error('Función desconocida: ' + name);
-        }
-    }
-
-    function calculate() {
-        if (current === '') return;
-        try {
-            const result = evaluate(current);
-            const formatted = formatResult(result);
-            history.textContent = current + ' =';
-            current = formatted;
-            justEvaluated = true;
-            updateDisplay();
-        } catch (e) {
-            display.value = 'Error: ' + e.message;
-            current = '';
-            justEvaluated = true;
-        }
-    }
-
-    // ===== EVENT HANDLERS =====
-    document.querySelectorAll('.btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const action = btn.dataset.action;
-            const value = btn.dataset.value;
-            switch (action) {
-                case 'append': append(value); break;
-                case 'clear': clearAll(); break;
-                case 'backspace': backspace(); break;
-                case 'equals': calculate(); break;
-                case 'func': applyFunc(value); break;
-                case 'square': squareCurrent(); break;
-                case 'factorial': factorialCurrent(); break;
-            }
-        });
+      });
     });
 
-    toggleBtn.addEventListener('click', () => {
-        sciPanel.classList.toggle('hidden');
-        toggleBtn.classList.toggle('active');
-    });
-
-    // Keyboard support
+    // Soporte teclado
     document.addEventListener('keydown', (e) => {
-        const k = e.key;
-        if (/[0-9.+\-*/%()^]/.test(k)) {
-            e.preventDefault();
-            append(k);
-        } else if (k === 'Enter' || k === '=') {
-            e.preventDefault();
-            calculate();
-        } else if (k === 'Backspace') {
-            e.preventDefault();
-            backspace();
-        } else if (k === 'Escape') {
-            e.preventDefault();
-            clearAll();
-        }
+      const k = e.key;
+      if (/[0-9]/.test(k)) appendNum(k);
+      else if (k === '.') appendDot();
+      else if ('+-*/^'.includes(k)) appendOp(k);
+      else if (k === '(' || k === ')') appendParen(k);
+      else if (k === 'Enter' || k === '=') { e.preventDefault(); evaluate(); }
+      else if (k === 'Backspace') backspace();
+      else if (k === 'Escape') clearAll();
     });
 
-    updateDisplay();
+    render();
+  });
 })();
