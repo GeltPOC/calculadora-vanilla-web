@@ -1,88 +1,90 @@
-# Calculadora Vanilla Web - Modo Científico
+# Calculadora Vanilla Web - Tema Día/Noche
 
-Calculadora web construida en **HTML + CSS + JavaScript vanilla** (sin frameworks). Incluye modo básico y modo científico con parser propio (sin `eval()`).
+Calculadora científica en HTML + CSS + JavaScript puro (sin frameworks) con soporte de **modo día/noche**.
 
-## 🚀 Uso
+## ✨ Feature: Tema Día/Noche
 
-Abre `index.html` en tu navegador. No requiere instalación ni dependencias.
+- **Botón toggle** en la esquina superior con icono ☀️ / 🌙 que alterna entre los modos.
+- **Modo noche (default)**: tema oscuro con fondos profundos y texto claro.
+- **Modo día**: tema claro con fondos blancos/grises claros, texto oscuro y acentos azul/naranja en operadores.
+- **Persistencia** en `localStorage` bajo la clave `calc-theme`.
+- **Detección automática**: si no hay preferencia guardada, se utiliza `prefers-color-scheme` del sistema operativo.
+- **Transiciones suaves** de `0.3s` en `background-color` y `color`.
+- Implementado con **variables CSS** en `:root` y override mediante `body[data-theme="light"]`.
 
-bash
-# Opcional: servir con cualquier servidor estático
-python3 -m http.server 8000
-# Luego abre http://localhost:8000
+### Cómo funciona
 
+1. Al cargar la página, `script.js` lee `localStorage.getItem('calc-theme')`.
+2. Si existe (`light` o `dark`), se aplica.
+3. Si no, se consulta `window.matchMedia('(prefers-color-scheme: light)')`.
+4. Al hacer click en el botón `#theme-toggle`, se alterna el atributo `data-theme` en el `<body>` y se persiste el valor.
 
-## ✨ Características
+## 🧮 Modo Científico
 
-- Tema oscuro responsive
-- Operaciones básicas: `+`, `-`, `×`, `÷`, `%`
-- Soporte completo de teclado
-- Historial de la última operación
-- Modo científico colapsable
-- Parser de expresiones propio (precedencia + paréntesis), **sin `eval()`**
-- Manejo robusto de errores
+Incluye todas las funciones científicas, intactas:
 
-## 🔬 Modo científico
+- Trigonométricas: `sin`, `cos`, `tan` (radianes)
+- Logarítmicas: `log` (base 10), `ln` (base e)
+- Potencias: `x²`, `x^y`, `√` (raíz cuadrada)
+- Constantes: `π`, `e`
+- Factorial: `n!`
+- Paréntesis: `(`, `)`
+- Operaciones básicas: `+`, `−`, `×`, `÷`
 
-Activa el panel pulsando el botón **Científico** en la cabecera. Funciones disponibles:
+## 🔒 Sin `eval`
 
-| Botón | Función | Descripción |
-|-------|---------|-------------|
-| `sin` | `Math.sin(x)` | Seno (radianes) |
-| `cos` | `Math.cos(x)` | Coseno (radianes) |
-| `tan` | `Math.tan(x)` | Tangente (radianes) |
-| `log` | `Math.log10(x)` | Logaritmo base 10 |
-| `ln`  | `Math.log(x)` | Logaritmo natural |
-| `√`   | `Math.sqrt(x)` | Raíz cuadrada |
-| `x²`  | `(x)^2` | Eleva al cuadrado la expresión actual |
-| `x^y` | `Math.pow` | Potencia (operador `^`) |
-| `π`   | `Math.PI` | Constante pi |
-| `e`   | `Math.E` | Constante de Euler |
-| `n!`  | factorial | Factorial entero, 0 ≤ n ≤ 170 |
-| `(` `)` | paréntesis | Agrupación |
+La evaluación de expresiones se realiza con un **parser propio**:
 
-### Reglas
+1. **Tokenizer** que reconoce números, operadores, funciones y paréntesis.
+2. **Algoritmo Shunting-Yard** para convertir a notación polaca inversa (RPN).
+3. **Evaluador de RPN** con stack.
 
-- Las funciones trigonométricas trabajan en **radianes**.
-- `sqrt(x)` requiere `x ≥ 0`.
-- `n!` requiere entero no negativo y `n ≤ 170` (límite de precisión IEEE 754).
-- División entre 0 lanza error.
-- Paréntesis desbalanceados lanzan error.
-
-## ⌨️ Atajos de teclado
-
-| Tecla | Acción |
-|-------|--------|
-| `0-9` `.` | Insertar dígito |
-| `+ - * / % ^ ( )` | Operadores |
-| `Enter` o `=` | Calcular |
-| `Backspace` | Borrar último carácter |
-| `Escape` | Limpiar todo |
+Esto evita riesgos de seguridad y entrega errores controlados.
 
 ## 📁 Estructura
 
 
 .
-├── index.html    # Estructura
-├── styles.css    # Tema oscuro responsive
-├── script.js     # Parser + lógica
+├── index.html      # Estructura: toggle + display + teclado científico
+├── styles.css      # Variables CSS, temas dark/light, transiciones
+├── script.js       # Toggle de tema + lógica calculadora (parser sin eval)
 └── README.md
 
 
-## 🧠 Implementación del parser
+## 🚀 Uso
 
-El evaluador implementa **descenso recursivo** con la siguiente gramática:
+Abre `index.html` directamente en cualquier navegador moderno. No requiere build ni dependencias.
+
+bash
+# Opcional: servir con un servidor estático
+npx serve .
+# o
+python3 -m http.server 8080
 
 
-expression := term (('+'|'-') term)*
-term       := factor (('*'|'/'|'%') factor)*
-factor     := unary ('^' factor)?      // ^ asociativo a la derecha
-unary      := ('+'|'-') unary | primary
-primary    := number | '(' expression ')' | func '(' expression ')'
+## ⌨️ Soporte de teclado
 
+- Dígitos `0-9` y `.`
+- Operadores `+ - * / ^`
+- Paréntesis `( )`
+- `Enter` o `=` para evaluar
+- `Backspace` para borrar
+- `Escape` para limpiar todo
 
-Esto evita por completo el uso de `eval()` y proporciona mensajes de error específicos.
+## 🎨 Personalización de tema
 
-## 📜 Licencia
+Edita las variables CSS en `styles.css`:
 
-MIT
+css
+:root {
+  --bg-app: #0f1115;
+  --bg-key-op: #f59e0b;
+  /* ... */
+}
+
+body[data-theme="light"] {
+  --bg-app: #f3f4f6;
+  --bg-key-op: #f59e0b;
+  /* ... */
+}
+
